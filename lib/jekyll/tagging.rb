@@ -8,6 +8,11 @@ module Jekyll
     safe true
 
     def generate(site)
+      unless Tagger.const_defined?(:TAG_SANITIZE)
+        Tagger.const_set('TAG_SANITIZE', site.config['tag_sanitize'] || 'false')
+      end
+
+
       unless Tagger.const_defined?(:TAG_PAGE_DIR)
         Tagger.const_set('TAG_PAGE_DIR', site.config['tag_page_dir'] || 'tag')
       end
@@ -37,6 +42,8 @@ module Jekyll
     end
 
     def new_tag_page(site, base, dir, tag, posts)
+      tag = Sanitize.word(tag) if Tagger::TAG_SANITIZE == true
+      
       TagPage.new(site, base, dir, "#{tag}.html", {
         'layout' => @tag_page_layout,
         'posts'  => posts,
@@ -54,6 +61,12 @@ module Jekyll
       tags.map { |tag, size| [tag, range.quantile(size, num)] }
     end
 
+  end
+
+  class Sanitize
+    def self.word(s)
+      return s.gsub(/([^0-9A-Za-z.\-])+/, '-')
+    end
   end
 
   class TagPage < Page
@@ -91,6 +104,9 @@ module Jekyll
     end
 
     def tag_url(tag)
+      tag = tag.downcase
+      tag = Sanitize.word(tag) if Tagger::TAG_SANITIZE == true
+
       "/#{Tagger::TAG_PAGE_DIR}/#{ERB::Util.u(tag)}#{'.html' unless PRETTY_URL}"
     end
 
